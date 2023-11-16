@@ -168,7 +168,7 @@ WHERE (player_id, event_date) IN (
 )
 
 
---15
+--#15
 /*
   question: https://leetcode.com/problems/trips-and-users/
 */
@@ -197,3 +197,155 @@ WHERE
   request_at BETWEEN '2013-10-01' AND '2013-10-03' AND
   client.banned = 'No' AND driver.banned = 'No'
 GROUP BY "Day"
+
+
+/*
+More JOIN operations
+https://sqlzoo.net/wiki/More_JOIN_operations
+*/
+
+--#6
+/*
+  Obtain the cast list (the names of the actors who were in the movie) for 'Casablanca'. 
+*/
+
+SELECT name FROM casting
+JOIN actor ON actorid = id
+WHERE movieid = 11768
+
+
+--#7
+/*
+  Obtain the cast list for the film 'Alien' 
+*/
+
+SELECT name
+FROM casting
+JOIN actor ON actor.id = actorid
+WHERE movieid IN (
+  SELECT id FROM movie WHERE title = 'Alien'
+)
+
+
+--#8
+/*
+  List the films in which 'Harrison Ford' has appeared 
+*/
+
+SELECT title
+FROM movie
+JOIN casting ON movieid = movie.id
+WHERE 'Harrison Ford' = (
+  SELECT name FROM actor WHERE actor.id = actorid
+)
+
+
+--#9
+/*
+  List the films where 'Harrison Ford' has appeared - but not in the starring role.
+  [Note: the ord field of casting gives the position of the actor.
+  If ord=1 then this actor is in the starring role] 
+*/
+
+SELECT title
+FROM movie
+JOIN casting ON movieid = movie.id AND ord != 1
+JOIN actor ON actorid = actor.id AND name = 'Harrison Ford'
+
+
+--#10
+/*
+  List the films together with the leading star for all 1962 films.
+*/
+
+SELECT title, name AS "leading star"
+FROM movie
+JOIN casting ON movieid = movie.id AND ord = 1
+JOIN actor ON actorid = actor.id
+WHERE yr = 1962
+
+
+--#11
+/*
+  Which were the busiest years for 'Rock Hudson', show the year and the number of movies he made each year
+  for any year in which he made more than 2 movies. 
+*/
+
+SELECT yr, COUNT(*) AS "movies"
+FROM movie
+JOIN casting ON movieid = movie.id
+JOIN actor ON actorid = actor.id AND name = 'Rock Hudson'
+GROUP BY yr
+HAVING movies > 2
+
+
+--#12
+/*
+  List the film title and the leading actor for all of the films 'Julie Andrews' played in. 
+*/
+
+SELECT title, name
+FROM movie m1
+JOIN casting c1 ON c1.movieid = m1.id
+JOIN actor a1 ON c1.actorid = a1.id
+WHERE
+  (
+    SELECT COUNT(*)
+    FROM movie m2
+    JOIN casting c2 ON c2.movieid = m2.id
+    JOIN actor a2 ON c2.actorid = a2.id AND a2.name = 'Julie Andrews'
+    WHERE m2.id = m1.id
+  ) > 0 AND
+  ord = 1
+
+
+--#13
+/*
+  Obtain a list, in alphabetical order, of actors who've had at least 15 starring roles. 
+*/
+
+SELECT name, COUNT(*)
+FROM actor
+JOIN casting ON actorid = id AND ord = 1
+GROUP BY actor.id
+HAVING COUNT(*) >= 15
+ORDER BY name
+
+
+--#14
+/*
+  List the films released in the year 1978 ordered by
+  the number of actors in the cast, then by title. 
+*/
+
+SELECT title, COUNT(*)
+FROM movie
+JOIN casting ON movieid = id
+WHERE yr = 1978
+GROUP BY id
+ORDER BY COUNT(*) DESC, title
+
+
+--#15
+/*
+  List all the people who have worked with 'Art Garfunkel'. 
+*/
+
+SELECT name FROM actor x
+WHERE (
+    -- where x worked with 'Art Garfunkel'
+    SELECT COUNT(*) FROM casting c1
+    JOIN actor ON actor.id = actorid AND actor.name = 'Art Garfunkel'
+    JOIN casting c2 ON c1.movieid = c2.movieid AND c2.actorid = x.id
+    LIMIT 1
+  ) = 1 AND
+  x.name <> 'Art Garfunkel'
+
+
+SELECT DISTINCT name FROM actor
+JOIN casting ON id = actorid
+WHERE movieid IN (
+    SELECT movieid FROM casting
+    JOIN actor ON id = actorid
+    WHERE name = 'Art Garfunkel'
+  ) AND name <> 'Art Garfunkel'
